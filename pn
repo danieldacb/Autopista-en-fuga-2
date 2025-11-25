@@ -1,0 +1,47 @@
+name: Build and analyze
+
+on:
+  push:
+    branches: 
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: Build and analyze
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore "Autopista en fuga 2.sln"
+
+      - name: Build
+        run: dotnet build "Autopista en fuga 2.sln" --no-restore --configuration Release
+
+      - name: SonarCloud Scan - Begin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          dotnet sonarscanner begin `
+            /k:"danieldacb_Autopista-en-fuga-2" `
+            /o:"danieldacb" `
+            /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+
+      - name: Build for Sonar
+        run: dotnet build "Autopista en fuga 2.sln" --configuration Release
+
+      - name: SonarCloud Scan - End
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
